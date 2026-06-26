@@ -1,0 +1,25 @@
+{
+  "name": "BabyHeadScan - 婴儿头型扫描",
+  "short_name": "BabyHeadScan",
+  "description": "通过手机摄像头扫描婴儿头型，生成专业数据报告",
+  "start_url": "./index.html",
+  "display": "standalone",
+  "orientation": "portrait",
+  "background_color": "#FFF5F7",
+  "theme_color": "#FF9A9E",
+  "lang": "zh-CN",
+  "icons": [
+    {
+      "src": "assets/icon-192.png",
+      "sizes": "192x192",
+      "type": "image/png",
+      "purpose": "any maskable"
+    },
+    {
+      "src": "assets/icon-512.png",
+      "sizes": "512x512",
+      "type": "image/png",
+      "purpose": "any maskable"
+    }
+  ]
+}

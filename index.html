@@ -1,0 +1,420 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, user-scalable=no">
+    <meta name="apple-mobile-web-app-capable" content="yes">
+    <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
+    <meta name="theme-color" content="#FF9A9E">
+    <title>BabyHeadScan - 婴儿头型扫描</title>
+    <link rel="stylesheet" href="css/style.css">
+    <link rel="manifest" href="manifest.json">
+</head>
+<body>
+    <!-- 登录/注册页 -->
+    <div id="login-screen" class="screen active">
+        <div class="login-container">
+            <!-- 品牌区 -->
+            <div class="login-brand">
+                <div class="login-logo">🍊</div>
+                <h1>BabyHeadScan</h1>
+                <p class="login-subtitle">婴儿头型智能扫描</p>
+            </div>
+
+            <!-- 初始状态：两个按钮 -->
+            <div id="login-actions" class="login-actions">
+                <button id="btn-show-login" class="btn btn-primary btn-entry">登 录</button>
+                <button id="btn-show-register" class="btn btn-outline btn-entry">注 册</button>
+            </div>
+
+            <!-- 登录表单（默认隐藏） -->
+            <form id="login-form" class="auth-form hidden" autocomplete="off" novalidate>
+                <h3 class="auth-form-title">🔑 账号登录</h3>
+                <div class="form-group">
+                    <label for="login-phone">
+                        <span class="label-icon">📱</span> 手机号
+                    </label>
+                    <input type="tel" id="login-phone" class="login-input" placeholder="请输入手机号" maxlength="11" inputmode="numeric" pattern="[0-9]*" autocomplete="tel">
+                </div>
+                <div class="form-group">
+                    <label for="login-password">
+                        <span class="label-icon">🔒</span> 密码
+                    </label>
+                    <div class="password-wrapper">
+                        <input type="password" id="login-password" class="login-input" placeholder="请输入密码（6-20位）" maxlength="20" autocomplete="current-password">
+                        <button type="button" id="toggle-password" class="password-toggle">👁️</button>
+                    </div>
+                </div>
+                <button type="submit" id="btn-login" class="btn btn-primary btn-login">登 录</button>
+                <button type="button" class="btn-back-login link-btn">← 返回</button>
+            </form>
+
+            <!-- 注册表单（默认隐藏） -->
+            <form id="register-form" class="auth-form hidden" autocomplete="off" novalidate>
+                <h3 class="auth-form-title">📝 账号注册</h3>
+                <div class="form-group">
+                    <label for="reg-phone">
+                        <span class="label-icon">📱</span> 手机号
+                    </label>
+                    <input type="tel" id="reg-phone" class="login-input" placeholder="请输入手机号" maxlength="11" inputmode="numeric" pattern="[0-9]*" autocomplete="tel">
+                </div>
+                <div class="form-group">
+                    <label for="reg-password">
+                        <span class="label-icon">🔒</span> 密码
+                    </label>
+                    <div class="password-wrapper">
+                        <input type="password" id="reg-password" class="login-input" placeholder="请设置密码（6-20位）" maxlength="20" autocomplete="new-password">
+                        <button type="button" id="toggle-reg-password" class="password-toggle">👁️</button>
+                    </div>
+                </div>
+                <div class="form-group">
+                    <label for="reg-code">
+                        <span class="label-icon">✉️</span> 短信验证码
+                    </label>
+                    <div class="code-input-group">
+                        <input type="text" id="reg-code" class="login-input code-input" placeholder="请输入验证码" maxlength="6" inputmode="numeric" pattern="[0-9]*" autocomplete="one-time-code">
+                        <button type="button" id="btn-get-reg-code" class="btn-get-code">获取验证码</button>
+                    </div>
+                </div>
+                <button type="submit" id="btn-register" class="btn btn-primary btn-register">注 册</button>
+                <button type="button" class="btn-back-register link-btn">← 返回</button>
+            </form>
+
+            <!-- 协议 -->
+            <div class="login-agreement">
+                登录即表示同意 <a href="#" onclick="return false;">《用户协议》</a> 和 <a href="#" onclick="return false;">《隐私政策》</a>
+            </div>
+
+            <!-- 演示提示 -->
+            <div class="login-demo-hint">
+                💡 演示版：直接点击登录即可进入
+            </div>
+        </div>
+    </div>
+
+    <!-- 启动页 -->
+    <div id="splash-screen" class="screen">
+        <div class="splash-content">
+            <div class="splash-icon">🍊</div>
+            <h1>BabyHeadScan</h1>
+            <p class="splash-subtitle">婴儿头型智能扫描分析</p>
+            <div class="splash-features">
+                <div class="feature-item">
+                    <span class="feature-icon">📸</span>
+                    <span>多角度拍摄</span>
+                </div>
+                <div class="feature-item">
+                    <span class="feature-icon">📊</span>
+                    <span>智能分析</span>
+                </div>
+                <div class="feature-item">
+                    <span class="feature-icon">📋</span>
+                    <span>数据报告</span>
+                </div>
+            </div>
+            <button id="btn-start" class="btn btn-primary btn-large">开始扫描</button>
+            <p class="splash-note">请在光线充足的环境下使用</p>
+        </div>
+    </div>
+
+    <!-- 信息录入页 -->
+    <div id="info-screen" class="screen">
+        <div class="screen-header">
+            <button class="btn-back" data-target="splash-screen">←</button>
+            <h2>宝宝信息</h2>
+            <div class="step-indicator">
+                <span class="step active">1</span>
+                <span class="step-line"></span>
+                <span>2</span>
+                <span class="step-line"></span>
+                <span>3</span>
+            </div>
+        </div>
+        <div class="screen-body">
+            <div class="form-group">
+                <label for="baby-name">宝宝昵称</label>
+                <input type="text" id="baby-name" placeholder="请输入宝宝昵称" maxlength="20">
+            </div>
+            <div class="form-group">
+                <label>性别</label>
+                <div class="gender-selector">
+                    <button class="gender-btn" data-gender="boy">👦 男宝宝</button>
+                    <button class="gender-btn active" data-gender="girl">👧 女宝宝</button>
+                </div>
+            </div>
+            <div class="form-group">
+                <label for="baby-age">天数（日龄）</label>
+                <div class="age-input-group">
+                    <input type="number" id="baby-age" placeholder="天数" min="0" max="730" value="90">
+                    <span class="input-unit">天</span>
+                </div>
+            </div>
+            <div class="form-group">
+                <label>是否早产</label>
+                <div class="toggle-selector" id="toggle-premature">
+                    <button class="toggle-btn active" data-value="no">否</button>
+                    <button class="toggle-btn" data-value="yes">是</button>
+                </div>
+            </div>
+            <div class="form-group">
+                <label for="head-circumference">头围 (选填)</label>
+                <div class="age-input-group">
+                    <input type="number" id="head-circumference" placeholder="头围" min="30" max="60" step="0.1">
+                    <span class="input-unit">cm</span>
+                </div>
+            </div>
+            <div class="form-group">
+                <label>头部是否有血肿</label>
+                <div class="toggle-selector" id="toggle-hematoma">
+                    <button class="toggle-btn active" data-value="no">无</button>
+                    <button class="toggle-btn" data-value="yes">有</button>
+                </div>
+            </div>
+            <div class="form-group">
+                <label>是否有钙化</label>
+                <div class="toggle-selector" id="toggle-calcification">
+                    <button class="toggle-btn active" data-value="no">无</button>
+                    <button class="toggle-btn" data-value="yes">有</button>
+                </div>
+            </div>
+            <div class="form-group">
+                <label for="fontanelle-size">前囟门大小 (选填)</label>
+                <div class="age-input-group">
+                    <input type="number" id="fontanelle-size" placeholder="前囟门大小" min="0" max="5" step="0.1">
+                    <span class="input-unit">cm</span>
+                </div>
+            </div>
+            <button id="btn-next-to-camera" class="btn btn-primary btn-full">下一步：拍摄照片</button>
+        </div>
+    </div>
+
+    <!-- 拍摄引导页 -->
+    <div id="guide-screen" class="screen">
+        <div class="screen-header">
+            <button class="btn-back" data-target="info-screen">←</button>
+            <h2>拍摄引导</h2>
+            <div class="step-indicator">
+                <span class="step done">✓</span>
+                <span class="step-line done"></span>
+                <span class="step active">2</span>
+                <span class="step-line"></span>
+                <span>3</span>
+            </div>
+        </div>
+        <div class="screen-body">
+            <div class="guide-content">
+                <h3>需要拍摄六个角度：</h3>
+                <div class="angle-cards">
+                    <div class="angle-card active" data-angle="right">
+                        <div class="angle-icon">👤</div>
+                        <h4>正右侧面</h4>
+                        <p>镜头对准正中，侧头侧身，微露鼻尖，衣物不遮挡脖子</p>
+                        <div class="angle-status" id="right-status">待拍摄</div>
+                    </div>
+                    <div class="angle-card" data-angle="left">
+                        <div class="angle-icon">👤</div>
+                        <h4>正左侧面</h4>
+                        <p>镜头对准正中，侧头侧身，微露鼻尖，衣物不遮挡脖子</p>
+                        <div class="angle-status" id="left-status">待拍摄</div>
+                    </div>
+                    <div class="angle-card" data-angle="front">
+                        <div class="angle-icon">😊</div>
+                        <h4>正脸</h4>
+                        <p>头要正不能歪，衣物不遮挡脖子</p>
+                        <div class="angle-status" id="front-status">待拍摄</div>
+                    </div>
+                    <div class="angle-card" data-angle="top">
+                        <div class="angle-icon">🔝</div>
+                        <h4>头顶</h4>
+                        <p>宝宝平躺脸朝上，微露鼻尖，露出前额</p>
+                        <div class="angle-status" id="top-status">待拍摄</div>
+                    </div>
+                    <div class="angle-card" data-angle="back">
+                        <div class="angle-icon">🔙</div>
+                        <h4>后脑勺</h4>
+                        <p>头要正不能歪，宝宝可趴着，露出脖子</p>
+                        <div class="angle-status" id="back-status">待拍摄</div>
+                    </div>
+                    <div class="angle-card" data-angle="forehead">
+                        <div class="angle-icon">💆</div>
+                        <h4>额头</h4>
+                        <p>镜头对准正中，头要正，微露额头</p>
+                        <div class="angle-status" id="forehead-status">待拍摄</div>
+                    </div>
+                </div>
+                <div class="guide-tips">
+                    <h4>📌 拍摄提示：</h4>
+                    <ul>
+                        <li>保持相机与宝宝头部水平</li>
+                        <li>距离约30-40厘米</li>
+                        <li>确保光线均匀充足</li>
+                        <li>宝宝头部尽量位于画面中央</li>
+                        <li>移开帽子、发带等遮挡物</li>
+                        <li>衣物不要遮挡脖子</li>
+                    </ul>
+                </div>
+                <button id="btn-open-camera" class="btn btn-primary btn-full">打开相机</button>
+            </div>
+        </div>
+    </div>
+
+    <!-- 相机页 -->
+    <div id="camera-screen" class="screen">
+        <div class="camera-container">
+            <video id="camera-video" autoplay playsinline muted></video>
+            <canvas id="camera-canvas"></canvas>
+            <div class="camera-overlay" id="camera-overlay">
+                <div class="overlay-guide" id="overlay-right">
+                    <div class="guide-side-shape"></div>
+                    <p class="guide-label">请将宝宝头部侧面对准框内<br>正右侧面 · 微露鼻尖</p>
+                </div>
+                <div class="overlay-guide hidden" id="overlay-left">
+                    <div class="guide-side-shape"></div>
+                    <p class="guide-label">请将宝宝头部侧面对准框内<br>正左侧面 · 微露鼻尖</p>
+                </div>
+                <div class="overlay-guide hidden" id="overlay-front">
+                    <div class="guide-ellipse"></div>
+                    <p class="guide-label">请将宝宝正脸对准椭圆区域<br>头要正 · 不能歪</p>
+                </div>
+                <div class="overlay-guide hidden" id="overlay-top">
+                    <div class="guide-ellipse"></div>
+                    <p class="guide-label">请从头顶正上方拍摄<br>微露鼻尖 · 露出前额</p>
+                </div>
+                <div class="overlay-guide hidden" id="overlay-back">
+                    <div class="guide-ellipse"></div>
+                    <p class="guide-label">请拍摄后脑勺<br>头要正 · 露出脖子</p>
+                </div>
+                <div class="overlay-guide hidden" id="overlay-forehead">
+                    <div class="guide-ellipse-narrow"></div>
+                    <p class="guide-label">请对准额头正中拍摄<br>头要正 · 微露额头</p>
+                </div>
+            </div>
+            <div class="camera-controls">
+                <button id="btn-switch-camera" class="btn btn-icon">🔄</button>
+                <button id="btn-capture" class="btn btn-capture">
+                    <div class="capture-ring"></div>
+                </button>
+                <button id="btn-toggle-flash" class="btn btn-icon">💡</button>
+            </div>
+            <div class="camera-info-bar">
+                <span id="current-angle-label">正右侧面</span>
+                <span id="capture-count">0/6 已拍摄</span>
+            </div>
+        </div>
+    </div>
+
+    <!-- 预览确认页 -->
+    <div id="preview-screen" class="screen">
+        <div class="screen-header">
+            <button class="btn-back" data-target="camera-screen">← 重拍</button>
+            <h2>预览确认</h2>
+            <button id="btn-confirm-photos" class="btn btn-small btn-primary">生成报告</button>
+        </div>
+        <div class="screen-body">
+            <div class="preview-grid">
+                <div class="preview-item" id="preview-right">
+                    <div class="preview-label">正右侧面</div>
+                    <canvas id="preview-canvas-right"></canvas>
+                    <button class="btn-retake" data-angle="right">重新拍摄</button>
+                </div>
+                <div class="preview-item" id="preview-left">
+                    <div class="preview-label">正左侧面</div>
+                    <canvas id="preview-canvas-left"></canvas>
+                    <button class="btn-retake" data-angle="left">重新拍摄</button>
+                </div>
+                <div class="preview-item" id="preview-front">
+                    <div class="preview-label">正脸</div>
+                    <canvas id="preview-canvas-front"></canvas>
+                    <button class="btn-retake" data-angle="front">重新拍摄</button>
+                </div>
+                <div class="preview-item" id="preview-top">
+                    <div class="preview-label">头顶</div>
+                    <canvas id="preview-canvas-top"></canvas>
+                    <button class="btn-retake" data-angle="top">重新拍摄</button>
+                </div>
+                <div class="preview-item" id="preview-back">
+                    <div class="preview-label">后脑勺</div>
+                    <canvas id="preview-canvas-back"></canvas>
+                    <button class="btn-retake" data-angle="back">重新拍摄</button>
+                </div>
+                <div class="preview-item" id="preview-forehead">
+                    <div class="preview-label">额头</div>
+                    <canvas id="preview-canvas-forehead"></canvas>
+                    <button class="btn-retake" data-angle="forehead">重新拍摄</button>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- 分析中页面 -->
+    <div id="analyzing-screen" class="screen">
+        <div class="analyzing-content">
+            <div class="analyzing-animation">
+                <div class="pulse-ring"></div>
+                <div class="pulse-ring delay-1"></div>
+                <div class="pulse-ring delay-2"></div>
+                <div class="analyzing-icon">🔍</div>
+            </div>
+            <h2>正在分析头型数据...</h2>
+            <div class="progress-bar-container">
+                <div class="progress-bar" id="analyze-progress"></div>
+            </div>
+            <p id="analyze-step-text">初始化图像数据...</p>
+        </div>
+    </div>
+
+    <!-- 报告页 -->
+    <div id="report-screen" class="screen">
+        <div class="screen-header report-header">
+            <button class="btn-back" data-target="splash-screen">← 首页</button>
+            <h2>头型分析报告</h2>
+            <button id="btn-export-report" class="btn btn-small btn-outline">📤 导出</button>
+        </div>
+        <div class="screen-body report-body" id="report-content">
+            <!-- 动态生成报告内容 -->
+        </div>
+        <div class="report-actions">
+            <button id="btn-new-scan" class="btn btn-secondary btn-full">开始新的扫描</button>
+        </div>
+    </div>
+
+    <!-- 底部导航提示 -->
+    <div id="toast" class="toast hidden"></div>
+
+    <!-- 付款弹窗 -->
+    <div id="payment-modal" class="modal-overlay" style="display:none;">
+        <div class="modal-box payment-modal">
+            <div class="modal-close" id="btn-close-payment">✕</div>
+            <div class="payment-header">
+                <span class="payment-icon">🔐</span>
+                <h3>解锁完整报告</h3>
+                <p class="payment-subtitle">支付后即可查看详细头型分析数据</p>
+            </div>
+            <div class="payment-price">
+                <span class="price-currency">¥</span>
+                <span class="price-value">59.9</span>
+            </div>
+            <div class="payment-features">
+                <div class="payment-feature"><span>📊</span> 综合评分</div>
+                <div class="payment-feature"><span>📏</span> 头指数分析</div>
+                <div class="payment-feature"><span>📐</span> 关键测量数据</div>
+                <div class="payment-feature"><span>📈</span> 头围生长参考</div>
+                <div class="payment-feature"><span>🔬</span> 详细分析数据</div>
+            </div>
+            <div class="payment-qr-section">
+                <div class="qr-container" id="qr-container">
+                    <canvas id="qr-canvas"></canvas>
+                </div>
+                <p class="qr-hint">📱 请使用微信/支付宝扫码支付</p>
+            </div>
+            <button id="btn-payment-done" class="btn btn-primary btn-full">我已完成付款</button>
+            <p class="payment-demo-hint">💡 演示版：直接点击"我已完成付款"即可查看报告</p>
+        </div>
+    </div>
+
+    <script src="js/camera.js"></script>
+    <script src="js/head-analysis.js"></script>
+    <script src="js/report.js"></script>
+    <script src="js/app.js"></script>
+</body>
+</html>
