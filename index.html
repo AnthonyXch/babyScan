@@ -404,8 +404,10 @@
             <div class="payment-qr-section">
                 <div class="qr-container" id="qr-container">
                     <canvas id="qr-canvas"></canvas>
+                    <img id="qr-image" src="" alt="收款码" style="display:none; width:100%; max-width:220px; border-radius:12px;" />
                 </div>
                 <p class="qr-hint">📱 请使用微信/支付宝扫码支付</p>
+                <p class="qr-amount-hint" style="display:none; color:var(--danger); font-weight:700; font-size:15px; margin-top:8px;"></p>
             </div>
             <button id="btn-payment-done" class="btn btn-primary btn-full" disabled>请先扫码支付</button>
         </div>

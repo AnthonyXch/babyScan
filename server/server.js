@@ -8,10 +8,15 @@ const cors = require('cors');
 const payment = require('./payment');
 const config = require('./config');
 
+const path = require('path');
+
 const app = express();
 app.use(cors());
 app.use(express.json());
 app.use(express.urlencoded({ extended: true }));
+
+// 静态文件服务（收款码图片等）
+app.use('/static', express.static(path.join(__dirname, 'public')));
 
 // ====== 支付API ======
 
@@ -147,6 +152,24 @@ app.post('/api/payment/notify/alipay', (req, res) => {
   // const result = payment.handlePaymentNotify('alipay', req.body);
   
   res.send('success');
+});
+
+// ====== 配置API ======
+
+/**
+ * GET /api/config
+ * 返回支付相关配置（含静态收款码设置）
+ */
+app.get('/api/config', (req, res) => {
+  res.json({
+    code: 0,
+    data: {
+      mode: config.mode,
+      amount: config.amount,
+      staticQR: config.staticQR,
+      expireSeconds: config.expireSeconds,
+    }
+  });
 });
 
 // ====== 健康检查 ======

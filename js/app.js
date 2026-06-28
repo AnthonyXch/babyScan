@@ -235,6 +235,7 @@
     // ===== 初始化 =====
     function init() {
         initLogin();
+        initPaymentModal();
 
         if (!CameraController.isSupported()) {
             alert('当前浏览器不支持摄像头，请使用现代浏览器（如Chrome）访问。');
@@ -494,18 +495,35 @@
         openCameraForAngle(angleId);
     }
 
-    // ===== 付款弹窗（后端对接） =====
+    // ===== 付款弹窗（后端对接 + 静态收款码） =====
     var currentOrderId = null;
     var paymentPollTimer = null;
     var paymentPaid = false;
+    var useStaticQR = false;
 
     async function showPaymentModal() {
         var modal = $('payment-modal');
         modal.style.display = 'flex';
         paymentPaid = false;
+        useStaticQR = false;
         
         // 重置UI
         resetPaymentUI();
+        
+        // 先获取配置，检查是否启用静态收款码
+        try {
+            var cfgResp = await fetch(API_BASE_URL + '/api/config');
+            var cfgJson = await cfgResp.json();
+            if (cfgJson.code === 0 && cfgJson.data.staticQR && cfgJson.data.staticQR.enabled) {
+                // 使用静态收款码图片
+                useStaticQR = true;
+                var staticCfg = cfgJson.data.staticQR;
+                showStaticQRCode(staticCfg);
+                return;
+            }
+        } catch (e) {
+            // 获取配置失败，走下方正常流程
+        }
         
         // 调用后端创建订单
         try {
@@ -526,6 +544,61 @@
             currentOrderId = 'LOCAL_' + Date.now();
             generateSimulatedQR();
             setupLocalSimPayment();
+        }
+    }
+
+    // 显示静态收款码图片
+    function showStaticQRCode(staticCfg) {
+        var qrCanvas = $('qr-canvas');
+        var qrImage = $('qr-image');
+        var qrHint = document.querySelector('.qr-hint');
+        var amountHint = document.querySelector('.qr-amount-hint');
+        var btnDone = $('btn-payment-done');
+
+        // 隐藏canvas，显示图片
+        if (qrCanvas) qrCanvas.style.display = 'none';
+        if (qrImage) {
+            qrImage.src = API_BASE_URL + staticCfg.imagePath;
+            qrImage.style.display = 'block';
+            qrImage.onerror = function() {
+                // 图片加载失败，回退到canvas
+                qrImage.style.display = 'none';
+                if (qrCanvas) qrCanvas.style.display = 'block';
+                if (qrHint) qrHint.textContent = '📱 请将收款码图片放入 server/public/ 目录';
+                generateSimulatedQR();
+                setupLocalSimPayment();
+            };
+        }
+
+        // 更新提示文字
+        if (qrHint) {
+            qrHint.textContent = '📱 请使用微信/支付宝扫描上方收款码';
+            qrHint.style.color = 'var(--text-light)';
+        }
+        if (amountHint) {
+            amountHint.textContent = '💰 请支付 ¥' + (staticCfg.amount / 100).toFixed(2) + ' 后点击下方按钮';
+            amountHint.style.display = 'block';
+        }
+
+        // 允许直接点击"我已完成付款"（手动确认模式）
+        if (staticCfg.manualConfirm) {
+            btnDone.disabled = false;
+            btnDone.classList.add('btn-ready');
+            btnDone.textContent = '我已完成付款 ✓';
+            paymentPaid = true;
+        } else {
+            // 自动确认模式：需要先点击图片
+            if (qrImage) {
+                qrImage.style.cursor = 'pointer';
+                qrImage.onclick = function() {
+                    if (paymentPaid) return;
+                    qrHint.textContent = '🔄 正在验证支付...';
+                    qrHint.style.color = 'var(--warning)';
+                    setTimeout(function() {
+                        onPaymentConfirmed();
+                    }, 2000);
+                };
+            }
         }
     }
 

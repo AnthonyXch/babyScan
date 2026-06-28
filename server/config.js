@@ -48,5 +48,16 @@ module.exports = {
   test: {
     // 模拟支付确认延迟（毫秒），模拟用户扫码支付的时间
     confirmDelayMs: 5000,
-  }
+  },
+
+  // ===== 静态收款码配置 =====
+  // 如果启用，前端弹窗会显示你的个人微信/支付宝收款码图片
+  // 图片请放入 server/public/ 目录下
+  staticQR: {
+    enabled: true,                         // 是否启用静态收款码
+    imagePath: '/static/qrcode.jpg',       // 收款码图片路径（相对于server目录）
+    payeeName: 'BabyHeadScan',             // 收款方名称
+    amount: 5990,                          // 金额（分）
+    manualConfirm: true,                   // 手动确认（个人码无回调，需用户自行确认已付款）
+  },
 };
