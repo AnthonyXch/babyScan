@@ -15,6 +15,10 @@
     let currentPhotoIndex = 0;
     const photoOrder = CameraController.ANGLES;
 
+    // ===== API 配置 =====
+    const API_BASE_URL = 'http://localhost:3456';
+    const POLL_INTERVAL_MS = 2000;
+
     // ===== DOM缓存 =====
     const screens = {
         login:     document.getElementById('login-screen'),
@@ -490,83 +494,116 @@
         openCameraForAngle(angleId);
     }
 
-    // ===== 付款弹窗 =====
-    function showPaymentModal() {
+    // ===== 付款弹窗（后端对接） =====
+    var currentOrderId = null;
+    var paymentPollTimer = null;
+    var paymentPaid = false;
+
+    async function showPaymentModal() {
         var modal = $('payment-modal');
         modal.style.display = 'flex';
-        generateQRCode();
-        initPaymentModal();
+        paymentPaid = false;
+        
+        // 重置UI
+        resetPaymentUI();
+        
+        // 调用后端创建订单
+        try {
+            var resp = await fetch(API_BASE_URL + '/api/payment/create', { method: 'POST' });
+            var json = await resp.json();
+            if (json.code === 0) {
+                currentOrderId = json.data.orderId;
+                generateQRCodeFromUrl(json.data.qrCodeUrl, json.data.orderId);
+                startPaymentPolling();
+            } else {
+                showToast('创建支付订单失败');
+                hidePaymentModal();
+            }
+        } catch (e) {
+            console.error('创建订单失败:', e);
+            // 后端未启动时，降级为本地模拟模式
+            showToast('⚠️ 后端未连接，使用本地模拟模式');
+            currentOrderId = 'LOCAL_' + Date.now();
+            generateSimulatedQR();
+            setupLocalSimPayment();
+        }
     }
 
     function hidePaymentModal() {
         $('payment-modal').style.display = 'none';
+        stopPaymentPolling();
     }
 
-    function generateQRCode() {
+    function resetPaymentUI() {
+        var btnDone = $('btn-payment-done');
+        btnDone.disabled = true;
+        btnDone.classList.remove('btn-ready');
+        btnDone.textContent = '请先扫码支付';
+
+        var qrCanvas = $('qr-canvas');
+        if (qrCanvas) {
+            qrCanvas.style.opacity = '1';
+            qrCanvas.style.pointerEvents = 'auto';
+        }
+        var qrHint = document.querySelector('.qr-hint');
+        if (qrHint) {
+            qrHint.textContent = '📱 请使用微信/支付宝扫码支付';
+            qrHint.style.color = 'var(--text-light)';
+        }
+    }
+
+    // 用真实URL生成二维码（后端返回的支付链接）
+    function generateQRCodeFromUrl(url, orderId) {
         var canvas = $('qr-canvas');
         if (!canvas) return;
 
-        // 使用简单的Canvas绘制模拟收款码
-        var ctx = canvas.getContext('2d');
-        var size = 180;
+        var size = 200;
         canvas.width = size;
         canvas.height = size;
+        var ctx = canvas.getContext('2d');
 
-        // 背景
         ctx.fillStyle = '#FFFFFF';
         ctx.fillRect(0, 0, size, size);
 
-        // 绘制二维码图案（模拟）
+        // 简单二维码模拟（实际应使用qrcode.js库）
         var moduleCount = 21;
         var moduleSize = size / moduleCount;
 
-        // 随机生成模块模式
-        function drawModule(row, col, dark) {
-            ctx.fillStyle = dark ? '#000000' : '#FFFFFF';
-            ctx.fillRect(col * moduleSize, row * moduleSize, moduleSize, moduleSize);
-        }
-
-        // 位置探测图案（三个角）
         function drawFinderPattern(startRow, startCol) {
             for (var r = 0; r < 7; r++) {
                 for (var c = 0; c < 7; c++) {
-                    var dark = (r === 0 || r === 6 || c === 0 || c === 6 ||
-                               (r >= 2 && r <= 4 && c >= 2 && c <= 4));
-                    drawModule(startRow + r, startCol + c, dark);
+                    var dark = (r === 0 || r === 6 || c === 0 || c === 6 || (r >= 2 && r <= 4 && c >= 2 && c <= 4));
+                    ctx.fillStyle = dark ? '#000000' : '#FFFFFF';
+                    ctx.fillRect((startCol + c) * moduleSize, (startRow + r) * moduleSize, moduleSize, moduleSize);
                 }
             }
         }
 
-        // 三个定位图案
         drawFinderPattern(0, 0);
         drawFinderPattern(0, 14);
         drawFinderPattern(14, 0);
 
-        // 随机数据模块
+        // 基于orderId哈希生成数据模块（保证同一订单二维码相同）
+        var hash = simpleHash(orderId);
         for (var r = 0; r < moduleCount; r++) {
             for (var c = 0; c < moduleCount; c++) {
-                // 跳过定位图案区域
                 if ((r < 8 && (c < 8 || c > 12)) || (r > 12 && c < 8)) continue;
-                // 随机填充
-                var dark = Math.random() > 0.5;
-                if (r > 0 && r < moduleCount - 1 && c > 0 && c < moduleCount - 1) {
-                    drawModule(r, c, dark);
-                }
+                var seed = (hash + r * 31 + c * 37) % 256;
+                ctx.fillStyle = seed > 128 ? '#000000' : '#FFFFFF';
+                ctx.fillRect(c * moduleSize, r * moduleSize, moduleSize, moduleSize);
             }
         }
 
         // 中间Logo
-        var logoSize = 40;
+        var logoSize = 44;
         var logoX = (size - logoSize) / 2;
         var logoY = (size - logoSize) / 2;
-
         ctx.fillStyle = '#FFFFFF';
-        ctx.fillRect(logoX - 2, logoY - 2, logoSize + 4, logoSize + 4);
+        ctx.fillRect(logoX - 3, logoY - 3, logoSize + 6, logoSize + 6);
         ctx.fillStyle = '#FF9A9E';
         ctx.beginPath();
         ctx.arc(logoX + logoSize / 2, logoY + logoSize / 2, logoSize / 2, 0, Math.PI * 2);
         ctx.fill();
-
         ctx.fillStyle = '#FFFFFF';
         ctx.font = 'bold 22px sans-serif';
         ctx.textAlign = 'center';
@@ -577,7 +614,143 @@
         ctx.fillStyle = '#636E72';
         ctx.font = '11px sans-serif';
         ctx.textAlign = 'center';
-        ctx.fillText('BabyHeadScan 收款码', size / 2, size - 6);
+        ctx.fillText('BabyHeadScan ¥59.90', size / 2, size - 8);
+    }
+
+    // 本地模拟模式（后端未连接时使用）
+    function generateSimulatedQR() {
+        var canvas = $('qr-canvas');
+        if (!canvas) return;
+
+        var size = 220;
+        canvas.width = size;
+        canvas.height = size;
+        var ctx = canvas.getContext('2d');
+
+        ctx.fillStyle = '#FFFFFF';
+        ctx.fillRect(0, 0, size, size);
+
+        var moduleCount = 21;
+        var moduleSize = size / moduleCount;
+
+        function drawFinderPattern(startRow, startCol) {
+            for (var r = 0; r < 7; r++) {
+                for (var c = 0; c < 7; c++) {
+                    var dark = (r === 0 || r === 6 || c === 0 || c === 6 || (r >= 2 && r <= 4 && c >= 2 && c <= 4));
+                    ctx.fillStyle = dark ? '#000000' : '#FFFFFF';
+                    ctx.fillRect((startCol + c) * moduleSize, (startRow + r) * moduleSize, moduleSize, moduleSize);
+                }
+            }
+        }
+
+        drawFinderPattern(0, 0);
+        drawFinderPattern(0, 14);
+        drawFinderPattern(14, 0);
+
+        for (var r = 0; r < moduleCount; r++) {
+            for (var c = 0; c < moduleCount; c++) {
+                if ((r < 8 && (c < 8 || c > 12)) || (r > 12 && c < 8)) continue;
+                ctx.fillStyle = Math.random() > 0.5 ? '#000000' : '#FFFFFF';
+                ctx.fillRect(c * moduleSize, r * moduleSize, moduleSize, moduleSize);
+            }
+        }
+
+        var logoSize = 48;
+        var logoX = (size - logoSize) / 2;
+        var logoY = (size - logoSize) / 2;
+        ctx.fillStyle = '#FFFFFF';
+        ctx.fillRect(logoX - 3, logoY - 3, logoSize + 6, logoSize + 6);
+        ctx.fillStyle = '#FF9A9E';
+        ctx.beginPath();
+        ctx.arc(logoX + logoSize / 2, logoY + logoSize / 2, logoSize / 2, 0, Math.PI * 2);
+        ctx.fill();
+        ctx.fillStyle = '#FFFFFF';
+        ctx.font = 'bold 24px sans-serif';
+        ctx.textAlign = 'center';
+        ctx.textBaseline = 'middle';
+        ctx.fillText('¥', logoX + logoSize / 2, logoY + logoSize / 2);
+
+        ctx.fillStyle = '#636E72';
+        ctx.font = '12px sans-serif';
+        ctx.textAlign = 'center';
+        ctx.fillText('BabyHeadScan ¥59.90', size / 2, size - 8);
+    }
+
+    function setupLocalSimPayment() {
+        var canvas = $('qr-canvas');
+        var qrHint = document.querySelector('.qr-hint');
+        var btnDone = $('btn-payment-done');
+
+        canvas.style.cursor = 'pointer';
+        canvas.onclick = function() {
+            if (paymentPaid) return;
+            // 模拟扫描后2秒确认
+            qrHint.textContent = '🔄 正在验证支付...';
+            qrHint.style.color = 'var(--warning)';
+            canvas.style.opacity = '0.5';
+            setTimeout(function() {
+                onPaymentConfirmed();
+            }, 2000);
+        };
+    }
+
+    // 轮询后端支付状态
+    function startPaymentPolling() {
+        stopPaymentPolling();
+        var pollCount = 0;
+        var maxPolls = 150; // 5分钟（2秒一次）
+
+        paymentPollTimer = setInterval(async function() {
+            pollCount++;
+            if (pollCount > maxPolls) {
+                stopPaymentPolling();
+                showToast('⏰ 支付超时，请重新生成订单');
+                hidePaymentModal();
+                return;
+            }
+
+            try {
+                var resp = await fetch(API_BASE_URL + '/api/payment/status/' + currentOrderId);
+                var json = await resp.json();
+                if (json.code === 0 && json.data.status === 'paid') {
+                    stopPaymentPolling();
+                    onPaymentConfirmed();
+                } else if (json.data && json.data.status === 'expired') {
+                    stopPaymentPolling();
+                    showToast('⏰ 订单已过期，请重新生成');
+                    hidePaymentModal();
+                }
+            } catch (e) {
+                // 静默处理网络错误，继续轮询
+            }
+        }, POLL_INTERVAL_MS);
+    }
+
+    function stopPaymentPolling() {
+        if (paymentPollTimer) {
+            clearInterval(paymentPollTimer);
+            paymentPollTimer = null;
+        }
+    }
+
+    // 支付确认回调
+    function onPaymentConfirmed() {
+        paymentPaid = true;
+        var btnDone = $('btn-payment-done');
+        btnDone.disabled = false;
+        btnDone.classList.add('btn-ready');
+        btnDone.textContent = '我已完成付款 ✓';
+
+        var qrCanvas = $('qr-canvas');
+        if (qrCanvas) {
+            qrCanvas.style.opacity = '0.5';
+            qrCanvas.style.pointerEvents = 'none';
+        }
+        var qrHint = document.querySelector('.qr-hint');
+        if (qrHint) {
+            qrHint.textContent = '✅ 支付成功！请点击下方按钮查看报告';
+            qrHint.style.color = 'var(--success)';
+        }
     }
 
     function initPaymentModal() {
@@ -593,15 +766,26 @@
             }
         };
 
-        // 已完成付款
+        // 已完成付款按钮
         $('btn-payment-done').onclick = function() {
+            if (!paymentPaid) {
+                showToast('⚠️ 请先扫描二维码完成支付');
+                return;
+            }
             hidePaymentModal();
             showToast('✅ 支付成功！正在生成报告...', 1500);
-            // 执行分析
             setTimeout(function() {
                 runAnalysis();
             }, 800);
         };
+    }
+
+    function simpleHash(str) {
+        var hash = 5381;
+        for (var i = 0; i < str.length; i++) {
+            hash = ((hash << 5) + hash + str.charCodeAt(i)) & 0xFFFFFFFF;
+        }
+        return Math.abs(hash);
     }
 
     // ===== 分析流程 =====
